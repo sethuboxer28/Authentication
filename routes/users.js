@@ -16,8 +16,8 @@ router.get("/api/users/", async (req, res) => {
     }
 
     if (!limit) {
-      const allusers = await User.find();
-      return res.status(200).json(allUser);
+      const allUsers = await User.find();
+      return res.status(200).json(allUsers);
     }
 
     const parsedLimit = Number(limit);
@@ -27,16 +27,16 @@ router.get("/api/users/", async (req, res) => {
       });
     }
 
-    const totalUserss = await User.countDocuments();
+    const totalUsers = await User.countDocuments();
 
-    if (parsedLimit > totalUser) {
+    if (parsedLimit > totalUsers) {
       return res
         .status(404)
-        .json({ message: `There are only ${totalUserss} users` });
+        .json({ message: `There are only ${totalUsers} users` });
     }
 
     const limitedUsers = await User.find().limit(parsedLimit);
-    return res.status(200).json(limitedUser);
+    return res.status(200).json(limitedUsers);
   } catch (error) {
     res.status(500).json({ message: `Error fetching users ${error}` });
   }
@@ -54,7 +54,7 @@ router.get("/api/users/:id", async (req, res) => {
         .json({ message: `User with ID ${req.params.id} not found` });
     }
   } catch (error) {
-    res.status(500).json({ message: `Error feching posts, ${error}` });
+    res.status(500).json({ message: `Error feching users, ${error}` });
   }
 });
 
