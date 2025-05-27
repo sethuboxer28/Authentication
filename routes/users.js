@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import User from "../models/User.js";
+import bcrypt from "bcryptjs";
 
 router.get("/api/users/", async (req, res) => {
   try {
@@ -44,17 +45,17 @@ router.get("/api/users/", async (req, res) => {
 
 router.get("/api/users/:id", async (req, res) => {
   try {
-    const users = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id);
 
-    if (users) {
-      res.status(200).json(users);
+    if (user) {
+      res.status(200).json(user);
     } else {
       res
         .status(404)
         .json({ message: `User with ID ${req.params.id} not found` });
     }
   } catch (error) {
-    res.status(500).json({ message: `Error feching users, ${error}` });
+    res.status(500).json({ message: `Error feching userss, ${error}` });
   }
 });
 
@@ -62,44 +63,72 @@ router.delete("/api/users/:id", async (req, res) => {
   const deletedUser = await User.findByIdAndDelete(req.params.id);
 
   if (deletedUser) {
-    res.status(200).json({ message: `Users with id ${req.params.id} deleted` });
+    res.status(200).json({ message: `User with id ${req.params.id} deleted` });
   } else {
     res
       .status(404)
-      .json({ message: `Users with ID ${req.params.id} not found` });
+      .json({ message: `User with ID ${req.params.id} not found` });
+  }
+});
+
+router.post("/api/users/", async (req, res) => {
+  const { username, password, biodata, jobrole } = req.body;
+  console.log(req.body);
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+      biodata,
+      jobRole:jobrole,
+    });
+    const savedUser = await newUser.save();
+    res.status(200).json(savedUser);
+  } catch (error) {
+    res.status(400).json({ message: ` Error creating a new user : ${error}` });
+  }
+});
+
+router.post("/api/users/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+
+    if (!user)
+      return res.status(404).json({ message: `User ${username} not found` });
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(404).json({ message: "invalid password" });
+
+    res.status(200).json({ message: `login successfull`, user });
+  } catch (error) {
+    res.status(500).json({ message: `Login error ${error}` });
   }
 });
 
 router.put("/api/users/:id", async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-    });
+    const updateData = { ...req.body };
+    if (updateData.password) {
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(updateData.password, salt);
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      req.params.id,
+      updateData,
+      { new: true }
+    );
     if (updatedUser) {
       res.status(200).json(updatedUser);
     } else {
-      res.status(404).json({
-        message: `Users with ID ${req.params.id} not found`,
-      });
+      res
+        .status(400)
+        .json({ message: `User with ID ${req.params.id} not found` });
     }
   } catch (error) {
-    res.status(500).json({ message: `Error feching users, ${error}` });
-  }
-});
-
-router.post("/api/users/", async (req, res) => {
-  const newUser = new User({
-    userName: req.body.userName,
-    password: req.body.password,
-    jobRole: req.body.jobRole,
-    description:req.body.description,
-  });
-
-  try {
-    const savedUser = await newUser.save();
-    res.status(200).json(savedUser);
-  } catch (error) {
-    res.status(400).json({ message: `Error creating new User: ${error}` });
+    res.status(500).json({ message: `Error editing user ${error}` });
   }
 });
 
